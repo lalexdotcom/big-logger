@@ -1,6 +1,6 @@
 {
   "name": "big-logger",
-  "version": "0.0.99",
+  "version": "0.1.0",
   "description": "Node and browser compatible beautiful logger",
   "main": "lib/index.js",
   "repository": "https://github.com/lalexdotcom/big-logger",
@@ -11,11 +11,10 @@
     "watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --watch --preserveWatchOutput",
     "format": "prettier --write \"src/**/*.ts\"",
     "script": "nodemon src/test.ts",
-
-    "prepare" : "npm run build",
+    "prepare": "npm run build",
     "prepublish": "npm run build",
-    "version" : "npm run format && git add -A src",
-    "postversion" : "git push && git push --tags"
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags"
   },
   "devDependencies": {
     "@types/node": "16",
@@ -31,5 +30,7 @@
     "chalk": "^4.1.2",
     "stacktrace-js": "^2.0.2"
   },
-  "files": ["lib/**/*"]
+  "files": [
+    "lib/**/*"
+  ]
 }
