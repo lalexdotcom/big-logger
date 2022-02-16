@@ -7,9 +7,10 @@
   "author": "LAlex <lalex@lalex.com>",
   "license": "MIT",
   "scripts": {
-    "watch": "tsc --watch",
+    "build": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --project .",
+    "watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --project . --watch --preserveWatchOutput",
     "test": "nodemon src/test.ts",
-    "prepublish": "tsc"
+    "prepublish": "npm run build"
   },
   "devDependencies": {
     "@types/node": "16",
