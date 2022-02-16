@@ -17,7 +17,7 @@ import { LogLevel } from "./BigLogger";
 	LGR.notice("notice");
 	LGR.info("info");
 	LGR.debug("debug");
-	LGR.verb("verb");
+	LGR.verb(globalThis);
 	await new Promise(res => setTimeout(res, 100));
 	LGR.wth("wth");
 })();

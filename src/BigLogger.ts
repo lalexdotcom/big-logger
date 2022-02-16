@@ -1,6 +1,6 @@
 import type StackTrace from "stacktrace-js";
 import type { Chalk } from "chalk";
-import type { inspect } from "util";
+import type { inspect, InspectOptions } from "util";
 import { rootCertificates } from "tls";
 import { Cipher } from "crypto";
 
@@ -63,6 +63,8 @@ type LoggerOptions = {
 	time: boolean;
 	level: LogLevel | undefined;
 	pad: boolean;
+
+	inspect: InspectOptions;
 };
 
 export interface Logger extends GenericLogger, LoggerOptions {
@@ -98,6 +100,8 @@ const DEFAULT_LOGGER_OPTIONS: LoggerOptions = {
 	date: false,
 	time: false,
 	pad: inNode,
+
+	inspect: { depth: 3, colors: true },
 };
 
 abstract class LoggerBase implements Logger {
@@ -241,6 +245,14 @@ abstract class LoggerBase implements Logger {
 
 	set pad(b: boolean) {
 		this.setOption("pad", b);
+	}
+
+	set inspect(opts: InspectOptions) {
+		this.setOption("inspect", opts);
+	}
+
+	get inspect() {
+		return this.getOption("inspect");
 	}
 }
 
@@ -489,6 +501,13 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 			const st = stacktrace.getSync();
 			const fName = st[3]?.functionName || st[3]?.fileName?.split("/").pop();
 			if (fName) logPrefix.push(`<${fName}>`);
+		}
+
+		if (inNode && utilInspect) {
+			console.log("Inspect in node with", logger.options.inspect);
+			try {
+				args = args.map(a => (typeof a === "object" ? utilInspect(a, logger.options.inspect || {}) : a));
+			} catch (e) {}
 		}
 	}
 
