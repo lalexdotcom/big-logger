@@ -13,6 +13,7 @@
     "script": "nodemon src/test.ts",
     "prepare": "npm run build",
     "prepublish": "npm run build",
+    "publish": "np",
     "version": "npm run format && git add -A src",
     "postversion": "git push && git push --tags"
   },
