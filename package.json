@@ -7,10 +7,15 @@
   "author": "LAlex <lalex@lalex.com>",
   "license": "MIT",
   "scripts": {
-    "build": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --project .",
-    "watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --project . --watch --preserveWatchOutput",
-    "test": "nodemon src/test.ts",
-    "prepublish": "npm run build"
+    "build": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc",
+    "watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --watch --preserveWatchOutput",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "script": "nodemon src/test.ts",
+
+    "prepare" : "npm run build",
+    "prepublish": "npm run build",
+    "version" : "npm run format && git add -A src",
+    "postversion" : "git push && git push --tags"
   },
   "devDependencies": {
     "@types/node": "16",
@@ -25,5 +30,6 @@
   "peerDependencies": {
     "chalk": "^4.1.2",
     "stacktrace-js": "^2.0.2"
-  }
+  },
+  "files": ["lib/**/*"]
 }

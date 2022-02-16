@@ -1,1 +1,1 @@
-export { Logger as LG } from './BigLogger'
+export { Logger as LG } from "./BigLogger";
