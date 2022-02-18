@@ -1,8 +1,6 @@
 import type StackTrace from "stacktrace-js";
 import type { Chalk } from "chalk";
 import type { inspect, InspectOptions } from "util";
-import { rootCertificates } from "tls";
-import { Cipher } from "crypto";
 
 const inNode = typeof process !== "undefined" && process.versions != null && process.versions.node != null;
 const inBrowser = typeof window !== "undefined" && typeof window.document !== "undefined";
@@ -496,19 +494,20 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 			logger.lastLog = new Date().valueOf();
 			logPrefix.push(timePrefix);
 		}
+	}
+	if (stack && stacktrace) {
+		const st = stacktrace.getSync();
+		const caller = st[3];
+		const fName =
+			caller?.functionName ||
+			caller?.fileName?.split("/").slice(-1).join("/") + ":" + caller.lineNumber + ":" + caller.columnNumber;
+		if (fName) logPrefix.push(`<${fName}>`);
+	}
 
-		if (stack && stacktrace) {
-			const st = stacktrace.getSync();
-			const fName = st[3]?.functionName || st[3]?.fileName?.split("/").pop();
-			if (fName) logPrefix.push(`<${fName}>`);
-		}
-
-		if (inNode && utilInspect) {
-			console.log("Inspect in node with", logger.options.inspect);
-			try {
-				args = args.map(a => (typeof a === "object" ? utilInspect(a, logger.options.inspect || {}) : a));
-			} catch (e) {}
-		}
+	if (inNode && utilInspect) {
+		try {
+			args = args.map(a => (typeof a === "object" ? utilInspect(a, logger.options.inspect || {}) : a));
+		} catch (e) {}
 	}
 
 	levelParams.methods.map(method => method.apply(globalThis, [...logPrefix, ...args]));
