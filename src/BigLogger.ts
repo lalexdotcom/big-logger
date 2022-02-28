@@ -5,11 +5,6 @@ import type { inspect, InspectOptions } from "util";
 const inNode = typeof process !== "undefined" && process.versions != null && process.versions.node != null;
 const inBrowser = typeof window !== "undefined" && typeof window.document !== "undefined";
 
-let stacktrace: typeof StackTrace | undefined;
-try {
-	stacktrace = require(`${"stacktrace-js"}`);
-} catch {}
-
 let chalk: Chalk;
 if (inNode) {
 	try {
@@ -112,8 +107,13 @@ abstract class LoggerBase implements Logger {
 		let proxyCount = 0;
 		return new Proxy(this, {
 			get(target, prop) {
-				if (prop == "log" && ++proxyCount > count) return () => {};
-				return target[prop as keyof typeof target];
+				if (prop == "logAtLevel" && ++proxyCount > count) return () => {};
+				const method = target[prop as keyof typeof target];
+				return method;
+			},
+			set(target, prop, value) {
+				throw new Error("Limited loggers are readonly");
+				return false;
 			},
 		});
 	}
@@ -123,62 +123,79 @@ abstract class LoggerBase implements Logger {
 	}
 
 	once(key?: string): GenericLogger {
-		return this.limit(1, key);
+		return this.limit(1, key || gtetCallerLimitKey());
 	}
 
 	limit(count: number, key?: string): GenericLogger {
-		if (key === undefined) {
-			if (!stacktrace) {
-				this.warn("stacktrace-js must be present for limiting features without key");
-			} else {
-				let stack = stacktrace.getSync();
-				const caller = stack?.[1];
-				if (caller) {
-					key = `${caller.fileName}:${caller.lineNumber}:${caller.columnNumber}`;
-				}
-			}
-		}
+		key ??= gtetCallerLimitKey();
+		// if (key === undefined) {
+		// 	if (!stacktrace) {
+		// 		this.warn("stacktrace-js must be present for limiting features without key");
+		// 	} else {
+		// 		let stack = stacktrace.getSync();
+		// 		let caller = stack.shift();
+		// 		while (caller && caller.functionName?.startsWith(ScopeLoggerInstance.name)) {
+		// 			caller = stack.shift();
+		// 		}
+		// 		// const caller = stack?.[1];
+		// 		let err: Error;
+		// 		try {
+		// 			throw new Error();
+		// 		} catch (e) {
+		// 			err = e as Error;
+		// 		}
+		// 		if (caller) {
+		// 			key = (() => getCaller())();
+		// 			console.log("Got limit key", key);
+		// 		}
+		// 	}
+		// }
 		if (key === undefined) {
 			throw new Error("Invalid key");
 		} else {
+			console.log("Limit key", key);
 			return (this.#limits[key] ??= this.#limitedProxy(count));
 		}
 		// throw new Error("Method not implemented.");
 	}
 
+	protected logAtLevel(level: LogLevel, ...args: LogParameters) {
+		return outputLog(level, args, this);
+	}
+
 	log(level: LogLevel, ...args: LogParameters): void {
-		outputLog(level, args, this);
+		return this.logAtLevel(level, ...args);
 	}
 
 	emerg(...args: LogParameters) {
-		return this.log(LogLevel.EMERGENCY, ...args);
+		return this.logAtLevel(LogLevel.EMERGENCY, ...args);
 	}
 	alert(...args: LogParameters) {
-		return this.log(LogLevel.ALERT, ...args);
+		return this.logAtLevel(LogLevel.ALERT, ...args);
 	}
 	crit(...args: LogParameters) {
-		return this.log(LogLevel.CRITICAL, ...args);
+		return this.logAtLevel(LogLevel.CRITICAL, ...args);
 	}
 	error(...args: LogParameters) {
-		return this.log(LogLevel.ERROR, ...args);
+		return this.logAtLevel(LogLevel.ERROR, ...args);
 	}
 	warn(...args: LogParameters) {
-		return this.log(LogLevel.WARNING, ...args);
+		return this.logAtLevel(LogLevel.WARNING, ...args);
 	}
 	notice(...args: LogParameters) {
-		return this.log(LogLevel.NOTICE, ...args);
+		return this.logAtLevel(LogLevel.NOTICE, ...args);
 	}
 	info(...args: LogParameters) {
-		return this.log(LogLevel.INFO, ...args);
+		return this.logAtLevel(LogLevel.INFO, ...args);
 	}
 	verb(...args: LogParameters) {
-		return this.log(LogLevel.VERBOSE, ...args);
+		return this.logAtLevel(LogLevel.VERBOSE, ...args);
 	}
 	debug(...args: LogParameters) {
-		return this.log(LogLevel.DEBUG, ...args);
+		return this.logAtLevel(LogLevel.DEBUG, ...args);
 	}
 	wth(...args: LogParameters) {
-		return this.log(LogLevel.WHO_CARES, ...args);
+		return this.logAtLevel(LogLevel.WHO_CARES, ...args);
 	}
 
 	get exclusive() {
@@ -272,8 +289,8 @@ class ScopeLoggerInstance extends LoggerBase implements ScopeLogger {
 		this.parent = root;
 	}
 
-	log(level: LogLevel, ...args: LogParameters): void {
-		outputLog(level, args, this, this.scope);
+	protected logAtLevel(level: LogLevel, ...args: LogParameters) {
+		return outputLog(level, args, this);
 	}
 }
 
@@ -440,7 +457,8 @@ const computeOptions = (logger: LoggerBase) => {
 	return computed;
 };
 
-const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, prefix?: string) => {
+const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, scope?: string) => {
+	console.log("Log from", logger.constructor.name);
 	if (registry.exclusive && registry.exclusive !== logger) return;
 	if (!logger.enabled || !root.enabled) return;
 
@@ -451,7 +469,7 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 	const levelParams = LEVEL_PARAMS[logLevel];
 
 	let levelPrefix = (pad && levelParams.paddedLabel) || levelParams.label;
-	if (prefix) levelPrefix += ` <${prefix}>`;
+	if (scope) levelPrefix += ` <${scope}>`;
 
 	let logPrefix: string[] = [levelPrefix];
 	if (inNode) {
@@ -495,12 +513,12 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 			logPrefix.push(timePrefix);
 		}
 	}
-	if (stack && stacktrace) {
-		const st = stacktrace.getSync();
-		const caller = st[3];
+	if (stack) {
+		const caller = gteLogCallerInfo();
+		console.log("Got caller", caller);
 		const fName =
 			caller?.functionName ||
-			caller?.fileName?.split("/").slice(-1).join("/") + ":" + caller.lineNumber + ":" + caller.columnNumber;
+			caller?.fileName?.split("/").slice(-1).join("/") + ":" + caller?.lineNumber + ":" + caller?.columnNumber;
 		if (fName) logPrefix.push(`<${fName}>`);
 	}
 
@@ -513,6 +531,36 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 	levelParams.methods.map(method => method.apply(globalThis, [...logPrefix, ...args]));
 
 	// console.log(`(${levelParams.paddedLabel || levelParams.label}${prefix ? ' ' + prefix : ''})`, ...args);
+};
+
+const gtetCallerLimitKey = () => getCallerStack(4);
+const gteLogCallerInfo = ():
+	| {
+			functionName?: string;
+			fileName?: string;
+			columnNumber?: string;
+			lineNumber?: string;
+	  }
+	| undefined => {
+	const stack = getCallerStack(6);
+	console.log("stack", stack);
+	if (stack) {
+		return inNode
+			? stack.match(/at (?<fileName>.*):(?<lineNumber>[0-9]*):(?<columnNumber>[0-9]*)/)?.groups
+			: stack.match(/at (?<functionName>.*) \(?(?<fileName>.*):(?<lineNumber>[0-9]*):(?<columnNumber>[0-9]*)\)/)
+					?.groups;
+	}
+};
+
+const getCallerStack = (level: number): string | undefined => {
+	let err: Error;
+	try {
+		throw new Error();
+	} catch (e) {
+		err = e as Error;
+	}
+	const stack = err.stack?.split("\n") || [];
+	return stack.slice(level)[0];
 };
 
 const registry = (() => {
