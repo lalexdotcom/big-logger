@@ -1,4 +1,3 @@
-import type StackTrace from "stacktrace-js";
 import type { Chalk } from "chalk";
 import type { inspect, InspectOptions } from "util";
 
@@ -111,10 +110,6 @@ abstract class LoggerBase implements Logger {
 				const method = target[prop as keyof typeof target];
 				return method;
 			},
-			set(target, prop, value) {
-				throw new Error("Limited loggers are readonly");
-				return false;
-			},
 		});
 	}
 
@@ -128,32 +123,9 @@ abstract class LoggerBase implements Logger {
 
 	limit(count: number, key?: string): GenericLogger {
 		key ??= gtetCallerLimitKey();
-		// if (key === undefined) {
-		// 	if (!stacktrace) {
-		// 		this.warn("stacktrace-js must be present for limiting features without key");
-		// 	} else {
-		// 		let stack = stacktrace.getSync();
-		// 		let caller = stack.shift();
-		// 		while (caller && caller.functionName?.startsWith(ScopeLoggerInstance.name)) {
-		// 			caller = stack.shift();
-		// 		}
-		// 		// const caller = stack?.[1];
-		// 		let err: Error;
-		// 		try {
-		// 			throw new Error();
-		// 		} catch (e) {
-		// 			err = e as Error;
-		// 		}
-		// 		if (caller) {
-		// 			key = (() => getCaller())();
-		// 			console.log("Got limit key", key);
-		// 		}
-		// 	}
-		// }
 		if (key === undefined) {
 			throw new Error("Invalid key");
 		} else {
-			console.log("Limit key", key);
 			return (this.#limits[key] ??= this.#limitedProxy(count));
 		}
 		// throw new Error("Method not implemented.");
@@ -290,7 +262,7 @@ class ScopeLoggerInstance extends LoggerBase implements ScopeLogger {
 	}
 
 	protected logAtLevel(level: LogLevel, ...args: LogParameters) {
-		return outputLog(level, args, this);
+		return outputLog(level, args, this, this.scope);
 	}
 }
 
@@ -405,19 +377,7 @@ for (const lvl of Object.values(LEVEL_PARAMS)) {
 	}
 }
 
-// Constants
-
-// export const LEVEL_STYLES = ObjectUtils.map(levelStyles, (styl: LogLevelStyle) => {
-//     const fullStyle = { ...DEFAULT_LEVEL_STYLE, ...styl };
-//     return {
-//         style: fullStyle,
-//         css: inBrowser ? css(fullStyle) : undefined,
-//     };
-// });
-
 function css(style: Partial<LogLevelStyle>) {
-	// const style = LEVEL_STYLES[level];
-
 	const STYLE_MAP: { [key in keyof Partial<LogLevelStyle>]: string } = {
 		backgroundColor: "background-color",
 	};
@@ -458,7 +418,6 @@ const computeOptions = (logger: LoggerBase) => {
 };
 
 const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, scope?: string) => {
-	console.log("Log from", logger.constructor.name);
 	if (registry.exclusive && registry.exclusive !== logger) return;
 	if (!logger.enabled || !root.enabled) return;
 
@@ -515,7 +474,6 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 	}
 	if (stack) {
 		const caller = gteLogCallerInfo();
-		console.log("Got caller", caller);
 		const fName =
 			caller?.functionName ||
 			caller?.fileName?.split("/").slice(-1).join("/") + ":" + caller?.lineNumber + ":" + caller?.columnNumber;
@@ -529,8 +487,6 @@ const outputLog = (logLevel: LogLevel, args: LogParameters, logger: LoggerBase, 
 	}
 
 	levelParams.methods.map(method => method.apply(globalThis, [...logPrefix, ...args]));
-
-	// console.log(`(${levelParams.paddedLabel || levelParams.label}${prefix ? ' ' + prefix : ''})`, ...args);
 };
 
 const gtetCallerLimitKey = () => getCallerStack(4);
@@ -543,7 +499,6 @@ const gteLogCallerInfo = ():
 	  }
 	| undefined => {
 	const stack = getCallerStack(6);
-	console.log("stack", stack);
 	if (stack) {
 		return inNode
 			? stack.match(/at (?<fileName>.*):(?<lineNumber>[0-9]*):(?<columnNumber>[0-9]*)/)?.groups

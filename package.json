@@ -1,35 +1,35 @@
 {
-  "name": "big-logger",
-  "version": "0.1.1",
-  "description": "Node and browser compatible beautiful logger",
-  "main": "lib/index.js",
-  "repository": "https://github.com/lalexdotcom/big-logger",
-  "author": "LAlex <lalex@lalex.com>",
-  "license": "MIT",
-  "scripts": {
-    "build": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc",
-    "watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --watch --preserveWatchOutput",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "script": "nodemon src/test.ts",
-    "prepare": "npm run build",
-    "prepublish": "npm run build",
-    "publish": "np",
-    "version": "npm run format && git add -A src",
-    "postversion": "git push && git push --tags"
-  },
-  "devDependencies": {
-    "@types/node": "16",
-    "chalk": "~4",
-    "nodemon": "^2.0.15",
-    "np": "^7.6.0",
-    "prettier": "^2.5.1",
-    "ts-node": "^10.5.0",
-    "typescript": "^4.5.5"
-  },
-  "peerDependencies": {
-    "chalk": "~4"
-  },
-  "files": [
-    "lib/**/*"
-  ]
+	"name": "@bigl/logger",
+	"version": "0.1.1",
+	"description": "Node and browser compatible beautiful logger",
+	"main": "lib/index.js",
+	"repository": "https://github.com/lalexdotcom/bigl-logger",
+	"author": "LAlex <lalex@lalex.com>",
+	"license": "MIT",
+	"scripts": {
+		"build": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc",
+		"watch": "rm -rf $(find lib -name \"*\" ! -name \"index.*\" | grep lib/) && tsc --watch --preserveWatchOutput",
+		"format": "prettier --write \"src/**/*.ts\"",
+		"script": "nodemon src/test.ts",
+		"prepare": "npm run build",
+		"prepublish": "npm run build",
+		"publish": "np",
+		"version": "npm run format && git add -A src",
+		"postversion": "git push && git push --tags"
+	},
+	"devDependencies": {
+		"@types/node": "16",
+		"chalk": "~4",
+		"nodemon": "^2.0.15",
+		"np": "^7.6.0",
+		"prettier": "^2.5.1",
+		"ts-node": "^10.5.0",
+		"typescript": "^4.5.5"
+	},
+	"peerDependencies": {
+		"chalk": "~4"
+	},
+	"files": [
+		"lib/**/*"
+	]
 }
